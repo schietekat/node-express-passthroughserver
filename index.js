@@ -15,6 +15,7 @@ AWS.config.update({
 const lambda = new AWS.Lambda();
 
 app.all('*', (req, res) => {
+    console.log('new request from ', req.hostname)
     const lambdaParams = {
         FunctionName: process.env.LAMBDA_ARN,
         InvocationType: 'RequestResponse', // Synchronous invocation
