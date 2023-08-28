@@ -24,6 +24,9 @@ app.all('*', (req, res) => {
             body: req.body,
             path: req.path,
             queryStringParameters: req.query,
+            params: req.params,
+            url: req.originalUrl,
+            HttpFullReqEvent: stringify(req),
             requestContext: {} // Add any additional context if needed
         })
     };
@@ -39,7 +42,27 @@ app.all('*', (req, res) => {
         res.status(lambdaResponse.statusCode || 200);
         res.send(lambdaResponse.body);
     });
+
+
 });
+
+
+function stringify(obj) {
+    let cache = [];
+    let str = JSON.stringify(obj, function (key, value) {
+        if (typeof value === "object" && value !== null) {
+            if (cache.indexOf(value) !== -1) {
+                // Circular reference found, discard key
+                return;
+            }
+            // Store value in our collection
+            cache.push(value);
+        }
+        return value;
+    });
+    cache = null; // reset the cache
+    return str;
+}
 
 
 app.listen(port, () => {
