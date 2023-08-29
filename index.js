@@ -1,6 +1,9 @@
 import express from "express"
 import AWS from "aws-sdk"
 import 'dotenv/config'
+import axios from "axios"
+
+const apiGatewayURL = process.env.API_GATEWAY_URL_CALLBACK;
 
 const app = express()
 app.use(express.json());
@@ -12,59 +15,23 @@ AWS.config.update({
     region: 'us-east-1'
 });
 
-const lambda = new AWS.Lambda();
-
-app.all('*', (req, res) => {
-    console.log('new request from ', req.hostname)
-    const lambdaParams = {
-        FunctionName: process.env.LAMBDA_ARN,
-        InvocationType: 'RequestResponse', // Synchronous invocation
-        Payload: JSON.stringify({
-            httpMethod: req.method,
-            headers: req.headers,
-            body: req.body,
-            path: req.path,
-            queryStringParameters: req.query,
-            params: req.params,
-            url: req.originalUrl,
-            HttpFullReqEvent: stringify(req),
-            requestContext: {} // Add any additional context if needed
+app.post("/callback", (req, res) => {
+    console.log('new request from ', req.headers['x-forwarded-for'], req.method)
+    axios.post(apiGatewayURL)
+        .then(response => {
+            console.log(response.data);
         })
-    };
+        .catch(error => {
+            console.error('Error making API request:', error);
+        });
 
-    lambda.invoke(lambdaParams, (err, data) => {
-        if (err) {
-            console.error('Error invoking Lambda:', err);
-            return res.status(500).send('Error invoking Lambda');
-        }
+    res.send("Petition redirect correctly")
+})
 
-        const lambdaResponse = JSON.parse(data.Payload);
-        res.set(lambdaResponse.headers || {});
-        res.status(lambdaResponse.statusCode || 200);
-        res.send(lambdaResponse.body);
-    });
-
-
+app.get('*', (req, res) => {
+    console.log('new request from ', req.headers['x-forwarded-for'], req.method)
+    res.status(405).send("Method not allowed")
 });
-
-
-function stringify(obj) {
-    let cache = [];
-    let str = JSON.stringify(obj, function (key, value) {
-        if (typeof value === "object" && value !== null) {
-            if (cache.indexOf(value) !== -1) {
-                // Circular reference found, discard key
-                return;
-            }
-            // Store value in our collection
-            cache.push(value);
-        }
-        return value;
-    });
-    cache = null; // reset the cache
-    return str;
-}
-
 
 app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
