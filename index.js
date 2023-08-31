@@ -16,9 +16,15 @@ AWS.config.update({
 });
 
 app.post("/callback", (req, res) => {
-    const queryParams = req.query;
-    console.log('new request from ', req.headers['x-forwarded-for'], req.method)
-    axios.post(apiGatewayURL, { params: queryParams })
+    const requestUrl = `${apiGatewayURL}${req.originalUrl}`;
+
+    // Forward the request to the API Gateway using Axios
+    axios({
+        method: req.method,
+        url: requestUrl,
+        headers: req.headers,
+        data: req.body,
+        })
         .then(response => {
             console.log(response.data);
         })
