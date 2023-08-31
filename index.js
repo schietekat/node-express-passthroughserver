@@ -17,6 +17,7 @@ AWS.config.update({
 });
 
 app.post("/callback", (req, res) => {
+    console.log('new request from ', req.headers['x-forwarded-for'], req.method)
     const requestUrl = `${apiGatewayURL}${req.originalUrl}`;
     const agent = new https.Agent({
         rejectUnauthorized: false
