@@ -2,12 +2,13 @@ import express from "express"
 import AWS from "aws-sdk"
 import 'dotenv/config'
 import axios from "axios"
-import https from "https"
+import bodyParser from "body-parser"
 
 const apiGatewayURL = process.env.API_GATEWAY_URL_CALLBACK;
 
 const app = express()
 app.use(express.json());
+app.use(bodyParser.text());
 const port = process.env.PORT || 3000;
 
 AWS.config.update({
@@ -16,29 +17,27 @@ AWS.config.update({
     region: 'us-east-1'
 });
 
-app.post("/callback", (req, res) => {
+app.post("/callback", async (req, res) => {
     console.log('new request from ', req.headers['x-forwarded-for'], req.method)
-    const requestUrl = `${apiGatewayURL}${req.originalUrl}`;
-    const agent = new https.Agent({
-        rejectUnauthorized: false
-    });
+    // const agent = new https.Agent({
+    //     rejectUnauthorized: false
+    // });
 
-    // Forward the request to the API Gateway using Axios
-    axios({
-        method: req.method,
-        url: requestUrl,
-        headers: req.headers,
-        data: req.body,
-        httpsAgent: agent
-    })
-        .then(response => {
-            console.log(response.data);
-        })
-        .catch(error => {
-            console.error('Error making ApiGateway request:', error);
-        });
+    try {
+        const queryParams = req.body;
 
-    res.send("Petition redirect correctly")
+        // Make a request to the API Gateway with the original query parameters
+        const response = await axios.post(apiGatewayURL, JSON.stringify(queryParams));
+
+        // Forward the API Gateway's response back to the client
+        console.log(response.status, response.statusText)
+        res.status(response.status).json(response.data);
+    } catch (error) {
+        console.error('Error redirecting to API Gateway:', error);
+        res.status(500).json({ error: 'An error occurred while redirecting.' });
+    }
+
+    // res.send("Petition redirect correctly")
 })
 
 app.get('*', (req, res) => {
