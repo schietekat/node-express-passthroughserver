@@ -16,13 +16,14 @@ AWS.config.update({
 });
 
 app.post("/callback", (req, res) => {
+    const queryParams = req.query;
     console.log('new request from ', req.headers['x-forwarded-for'], req.method)
-    axios.post(apiGatewayURL)
+    axios.post(apiGatewayURL, { params: queryParams })
         .then(response => {
             console.log(response.data);
         })
         .catch(error => {
-            console.error('Error making API request:', error);
+            console.error('Error making ApiGateway request:', error);
         });
 
     res.send("Petition redirect correctly")
